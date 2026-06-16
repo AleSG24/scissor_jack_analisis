@@ -42,8 +42,8 @@ class Brazo(Elemento):
         self.tension = tension
     
     def carga_interna(self):
-        F = self.P / (2 * np.sin(self.THETA))
-        return F if self.tension else -F   
+        F = self.P / (2 * np.sin(self.theta))
+        return F if self.tension else -F  
     
         
     def esfuerzo_axial(self):
