@@ -70,13 +70,6 @@ class Brazo(Elemento):
 
         return np.abs(self.carga_interna()) / self.A
  
-    def area_neta(self):
-        
-        return self.A - self.d * self.t
- 
-    def esfuerzo_tension_neta(self):
-       
-        return np.abs(self.carga_interna()) / self.area_neta()
  
     def esfuerzo_aplastamiento(self):
        
@@ -84,7 +77,7 @@ class Brazo(Elemento):
  
     def esfuerzo_critico(self):
         if self.tension:
-            return np.maximum(self.esfuerzo_tension_neta(),
+            return np.maximum(
                               self.esfuerzo_aplastamiento())
         return np.maximum(self.esfuerzo_axial(),
                           self.esfuerzo_aplastamiento())
