@@ -48,15 +48,16 @@ class Elemento:
 
 class Brazo(Elemento):
     #Datos Tabla-20 y Tabla 5 Shigley decima edicion
-    material = "Acero SAE 1020 HR"
+    material = "Acero SAE 1020 CD"
     E = 207e9
     Sy = 210e6
-    def __init__(self, nombre, A, I, L, d, t, K=1.0, tension=bool, **kw):
-        super().__init__(nombre, self.material, self.E, self.Sy, **kw)
+    def __init__(self, nombre, A, I, L, d_1,d_2, t, K=1.0, tension=bool, **kw):
+        super().__init__(nombre, self.E, self.Sy, **kw)
         self.A = A                # area transversal              m^2
         self.I = I                # momento de inercia            m^4
         self.L = L                # longitud del brazo            m
-        self.d = d                # diametro del hueco            m
+        self.d_1 = d_1              #diametro hueco pequeño m
+        self.d_2 = d_2                # diametro del hueco grande          m
         self.t = t                # espesor de la placa del brazo m
         self.K = K               
         self.tension = tension
@@ -71,80 +72,88 @@ class Brazo(Elemento):
         return np.abs(self.carga_interna()) / self.A
  
  
-    def esfuerzo_aplastamiento(self):
+    def esfuerzo_aplastamiento_1(self):
        
-        return np.abs(self.carga_interna()) / (self.t * self.d)
+        return np.abs(self.carga_interna()/4) / (self.t * self.d_1)
+    
+    def esfuerzo_aplastamiento_2(self):
+
+        return np.abs(self.carga_interna()/4) / (self.t * self.d_2)
  
     def esfuerzo_critico(self):
         if self.tension:
-            return np.maximum(
-                              self.esfuerzo_aplastamiento())
+            return self.esfuerzo_aplastamiento()
         return np.maximum(self.esfuerzo_axial(),
                           self.esfuerzo_aplastamiento())
- 
 
-    if tension == False:
+    def radio_giro(self):
+                return np.sqrt(self.I / self.A)                
         
-        def radio_giro(self):
-            return np.sqrt(self.I / self.A)                
-    
-        def esbeltez(self):
-            return self.K * self.L / self.radio_giro()     
-    
-        def constante_columna(self):
-            
-            return np.sqrt(2 * np.pi**2 * self.E / self.Sy)
-    
-        def carga_critica_johnson(self):
-            
-            return self.A * self.Sy * (
-                1 - self.Sy * self.esbeltez()**2 / (4 * np.pi**2 * self.E)
-            )
-    
-        def carga_critica_euler(self):
-            
-            return (np.pi**2 * self.E * self.I) / (self.K * self.L)**2
+    def esbeltez(self):
+                return self.K * self.L / self.radio_giro()     
         
-        def factor_seguridad(self):
+    def constante_columna(self):
+                
+                return np.sqrt(2 * np.pi**2 * self.E / self.Sy)
+        
+    def carga_critica_johnson(self):
+                
+                return self.A * self.Sy * (
+                    1 - self.Sy * self.esbeltez()**2 / (4 * np.pi**2 * self.E)
+                )
+        
+    def carga_critica_euler(self):
+                
+                return (np.pi**2 * self.E * self.I) / (self.K * self.L)**2
+ 
+    def factor_seguridad(self):
+        if not self.tension:
             F = np.abs(self.carga_interna())
+
             return {
-            "angulo": self.theta_deg,
-            "pandeo_johnson":        self.carga_critica_johnson() / F,   
-            "fluencia_compresion":   self.Sy / self.esfuerzo_axial(),
-            "aplastamiento":         self.Sy / self.esfuerzo_aplastamiento(),
-        }
-    else:
-        
-        def factor_seguridad(self):
-            F = np.abs(self.carga_interna())
-            return {
+                
                 "angulo": self.theta_deg,
-                "fluencia_tension_neta": self.Sy / self.esfuerzo_tension_neta(),
-                "aplastamiento":         self.Sy / self.esfuerzo_aplastamiento(),
-        }
-    
-    class Pasador(Elemento):
+                "pandeo_johnson":        self.carga_critica_johnson() / F,   
+                "fluencia_compresion":   self.Sy / self.esfuerzo_axial(),
+                "aplastamiento_hueco_1": self.Sy / self.esfuerzo_aplastamiento_1(),
+                "aplastamiento_hueco_2": self.Sy/self.esfuerzo_aplastamiento_2(),
+            }
+        else:
+            
+                F = np.abs(self.carga_interna())
+                return {
+                    
+                    "angulo": self.theta_deg,
+                    "fluencia_tension_neta": self.Sy / self.esfuerzo_axial(),
+                    "aplastamiento_hueco_1": self.Sy / self.esfuerzo_aplastamiento_1(),
+                    "aplastamiento_hueco_2": self.Sy/self.esfuerzo_aplastamiento_2(),
+            }
+        
+class Pasador(Elemento):
          #Datos Tabla-20 y Tabla 5 Shigley decima edicion
             material = "Acero SAE 1020 CD"
             E = 207e9
             Sy = 390e6
             def __init__(self, nombre, d, t, tipo, **kw):
 
-                super().__init__(nombre, self.material, self.E, self.Sy, **kw)
+                self.d = d
+                self.t = t
+                self.tipo = tipo #1 o 2 como fue definido en el avance 2
 
-            self.d = d
-            self.t = t
-            self.tipo = tipo #1 o 2 como fue definido en el avance 2
+                super().__init__(nombre, self.E, self.Sy, **kw)
+
+
+
 
             def carga_interna(self):
                 Rx, Ry = self.reaccion_nodo(self.tipo)
-                return np.hypot(Rx, Ry)
+                return np.hypot(Rx, Ry)/2
             
             def area_cortante(self):
                 return (np.pi*self.d**2)/4
             
             def esfuerzo_cortante(self):
-                return self.carga()/self.area_cortante()
+                return self.carga_interna()/self.area_cortante()
             
             def esfuerzo_aplastamiento(self):
                 return self.carga_interna()/(self.t*self.d)
@@ -156,36 +165,10 @@ class Brazo(Elemento):
                 return {
                     "angulo": self.theta_deg,
                     "cortante_von_mises": self.Ssy/self.esfuerzo_cortante(),
-
                     "aplastamiento": self.Sy/self.esfuerzo_aplastamiento(),
                 }
 
-class UnionArticulada(Elemento):
-    #Datos Tabla-20 y Tabla 5 Shigley decima edicion
-    material = "Acero SAE 1020 HR"
-    E = 207e9
-    Sy = 210e6
-    def __init__(self, nombre, d, t, tipo, **kw):
-        super().__init__(nombre, self.material, self.E, self.Sy, **kw)
-        self.d = d                # diámetro del hueco de la oreja m
-        self.t = t                # espesor de la oreja              m
-        self.tipo = tipo
- 
-    def carga_interna(self):
-        Rx, Ry = self.reaccion_nodo(self.tipo)
-        return np.hypot(Rx, Ry)
- 
-    def esfuerzo_aplastamiento(self):
-        return self.carga_interna() / (self.t * self.d)
- 
-    def esfuerzo_critico(self):
-        return self.esfuerzo_aplastamiento()
- 
-    def factor_seguridad(self):
-        return {
-            "angulo": self.theta_deg,
-            "aplastamiento": self.Sy / self.esfuerzo_aplastamiento()
-            }
+
 
 
 class TornilloDePotencia(Elemento):
@@ -194,7 +177,7 @@ class TornilloDePotencia(Elemento):
     E = 207e9
     Sy = 390e6
     def __init__(self, nombre, d, dm, l, f=0.12, dr=None, **kw):
-        super().__init__(nombre, self.material, self.E, self.Sy, **kw)
+        super().__init__(nombre,  self.E, self.Sy, **kw)
         self.d = d        # diámetro nominal de la rosca   m
         self.dm = dm      # diámetro medio de la rosca     m
         self.l = l        # avance de la rosca             m
@@ -232,7 +215,9 @@ class TornilloDePotencia(Elemento):
     def factor_seguridad(self):
         return {
             "angulo": self.theta_deg,
+            "Torque requerido": self.torque_requerido(),
             "von_mises_combinado": self.Sy / self.esfuerzo_von_mises()
+            
             }
 
 
