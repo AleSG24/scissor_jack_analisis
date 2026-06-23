@@ -17,7 +17,7 @@ class Elemento:
         self.P = 20000
     
 
-    def von_mises(sigma, tau):
+    def von_mises(self, sigma, tau):
 
         return np.sqrt(sigma**2 + 3.0*tau**2)
     
@@ -26,7 +26,7 @@ class Elemento:
         c, s = np.cos(self.theta), np.sin(self.theta)
         if tipo == 1:
             Rx = self.P * c / (2 * s)
-            Ry = self.P 
+            Ry = self.P/2 
         else:  # tipo 2
             Rx = self.P * c / s
             Ry = 0
@@ -74,11 +74,11 @@ class Brazo(Elemento):
  
     def esfuerzo_aplastamiento_1(self):
        
-        return np.abs(self.carga_interna()/4) / (self.t * self.d_1)
+        return np.abs(self.carga_interna()/2) / (self.t * self.d_1)
     
     def esfuerzo_aplastamiento_2(self):
 
-        return np.abs(self.carga_interna()/4) / (self.t * self.d_2)
+        return np.abs(self.carga_interna()/2) / (self.t * self.d_2)
  
     def esfuerzo_critico(self):
         if self.tension:
@@ -131,9 +131,9 @@ class Brazo(Elemento):
         
 class Pasador(Elemento):
          #Datos Tabla-20 y Tabla 5 Shigley decima edicion
-            material = "Acero SAE 1020 CD"
-            E = 207e9
-            Sy = 390e6
+            material = "Acero AISI 1045 CD"
+            E = 207e9 #Tengo que cambiarlo
+            Sy = 530e6
             def __init__(self, nombre, d, t, tipo, **kw):
 
                 self.d = d
@@ -147,10 +147,10 @@ class Pasador(Elemento):
 
             def carga_interna(self):
                 Rx, Ry = self.reaccion_nodo(self.tipo)
-                return np.hypot(Rx, Ry)/2
+                return np.hypot(Rx, Ry)
             
             def area_cortante(self):
-                return (np.pi*self.d**2)/4
+                return 2*(np.pi*self.d**2)/4
             
             def esfuerzo_cortante(self):
                 return self.carga_interna()/self.area_cortante()
@@ -175,19 +175,19 @@ class TornilloDePotencia(Elemento):
     #Datos Tabla-20 y Tabla 5 Shigley decima edicion
     material = "Acero SAE 1020 HR"
     E = 207e9
-    Sy = 390e6
-    def __init__(self, nombre, d, dm, l, f=0.12, dr=None, **kw):
+    Sy = 530e6
+    def __init__(self, nombre, d, l, f=0.12, dr=None, **kw):
         super().__init__(nombre,  self.E, self.Sy, **kw)
         self.d = d        # diámetro nominal de la rosca   m
-        self.dm = dm      # diámetro medio de la rosca     m
         self.l = l        # avance de la rosca             m
         self.f = f        # coeficiente de fricción
+        self.dm = d - 0.6495*self.l      # diámetro medio de la rosca     m
         
         self.dr = dr if dr is not None else d - 1.226869 * l
  
     def carga_interna(self):
         
-        return 2 * self.P * np.cos(self.theta) / np.sin(self.theta)
+        return self.P * np.cos(self.theta) / np.sin(self.theta)
  
     def torque_requerido(self):
         
@@ -206,8 +206,7 @@ class TornilloDePotencia(Elemento):
         return 16 * self.torque_requerido() / (np.pi * self.dr**3)
  
     def esfuerzo_von_mises(self):
-        return self.von_mises(self.esfuerzo_axial(),
-                              self.esfuerzo_cortante_torsion())
+        return self.von_mises(self.esfuerzo_axial(), self.esfuerzo_cortante_torsion())
  
     def esfuerzo_critico(self):
         return self.esfuerzo_von_mises()
@@ -219,6 +218,9 @@ class TornilloDePotencia(Elemento):
             "von_mises_combinado": self.Sy / self.esfuerzo_von_mises()
             
             }
+    
+
+
 
 
 
