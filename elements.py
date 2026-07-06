@@ -134,13 +134,15 @@ class Pasador(Elemento):
             material = "Acero AISI 1045 CD"
             E = 207e9 #Tengo que cambiarlo
             Sy = 530e6
-            def __init__(self, nombre, d, t, tipo, **kw):
+            def __init__(self, nombre, d, t, tipo, Sy_apoyo=None, **kw):
 
                 self.d = d
                 self.t = t
                 self.tipo = tipo #1 o 2 como fue definido en el avance 2
 
                 super().__init__(nombre, self.E, self.Sy, **kw)
+                #Aplastamiento gobernado por el material mas debil del par en contacto
+                self.Sy_apl = min(self.Sy, Sy_apoyo) if Sy_apoyo is not None else self.Sy
 
 
 
@@ -165,7 +167,7 @@ class Pasador(Elemento):
                 return {
                     "angulo": self.theta_deg,
                     "cortante_von_mises": self.Ssy/self.esfuerzo_cortante(),
-                    "aplastamiento": self.Sy/self.esfuerzo_aplastamiento(),
+                    "aplastamiento": self.Sy_apl/self.esfuerzo_aplastamiento(),
                 }
 
 
@@ -173,14 +175,15 @@ class Pasador(Elemento):
 
 class TornilloDePotencia(Elemento):
     #Datos Tabla-20 y Tabla 5 Shigley decima edicion
-    material = "Acero SAE 1020 HR"
+    material = "Acero AISI 1045 CD"
     E = 207e9
     Sy = 530e6
-    def __init__(self, nombre, d, l, f=0.12, dr=None, **kw):
+    def __init__(self, nombre, d, l, f=0.12, alpha_deg=30.0, dr=None, **kw):
         super().__init__(nombre,  self.E, self.Sy, **kw)
         self.d = d        # diámetro nominal de la rosca   m
         self.l = l        # avance de la rosca             m
         self.f = f        # coeficiente de fricción
+        self.alpha = np.radians(alpha_deg)  # semiángulo del perfil de rosca (rosca ISO M: 30°)
         self.dm = d - 0.6495*self.l      # diámetro medio de la rosca     m
         
         self.dr = dr if dr is not None else d - 1.226869 * l
@@ -190,11 +193,12 @@ class TornilloDePotencia(Elemento):
         return self.P * np.cos(self.theta) / np.sin(self.theta)
  
     def torque_requerido(self):
-        
+        # Ec. (8-5) Shigley: rosca ISO con corrección por ángulo de flanco (sec alpha)
         Ft = self.carga_interna()
+        sec = 1.0 / np.cos(self.alpha)
         return (Ft * self.dm / 2) * (
-            (self.l + np.pi * self.f * self.dm) /
-            (np.pi * self.dm - self.f * self.l)
+            (self.l + np.pi * self.f * self.dm * sec) /
+            (np.pi * self.dm - self.f * self.l * sec)
         )
  
     def esfuerzo_axial(self):

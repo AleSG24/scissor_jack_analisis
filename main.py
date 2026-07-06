@@ -23,7 +23,8 @@ def main():
    print("aplastamiento_hueco_2:", factores_t["aplastamiento_hueco_2"], "\n")
  
  
-   pasador1 = Pasador("pasador1", 8e-3,8e-3,1)
+   #El perno tipo 1 apoya contra las placas de acero SAE 1020 (210 MPa), material mas debil del par
+   pasador1 = Pasador("pasador1", 8e-3,8e-3,1, Sy_apoyo=210e6)
    pasador2 = Pasador("pasador2", 10e-3, 8e-3,2)
  
    factores_1 = pasador1.factor_seguridad()
