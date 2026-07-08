@@ -2,6 +2,8 @@ from elements import Brazo
 from elements import Pasador
 from elements import TornilloDePotencia
 
+import iteradores
+
 def main():
     #Ahora, construiré la gata utilizando los objetos creados
 
@@ -48,6 +50,26 @@ def main():
    print("angulo:", factorestor["angulo"], "\n")
    print("Torque requerido:", factorestor["Torque requerido"], "\n")
    print("von_mises_combinado:", factorestor["von_mises_combinado"], "\n")
+
+
+
+   print("1) TORNILLO DE POTENCIA")
+   d_tornillo = iteradores.iterar_tornillo(d_inicial=10e-3, l=1.5e-3)
+
+   print(" 2) PASADORES ")
+   #El pasador tipo 1 apoya contra las placas de acero SAE 1020 (210 MPa)
+   d_pasador1 = iteradores.iterar_pasador("pasador1", 8e-3, 8e-3, 1, Sy_apoyo=210e6)
+   d_pasador2 = iteradores.iterar_pasador("pasador2", 10e-3, 8e-3, 2)
+
+   print(" 3) BRAZOS ")
+   t_brazo = iteradores.iterar_brazo(418.84e-6, 23046.51e-12, 145e-3,
+                                     10e-3, 8e-3, 5e-3, 1.0)
+
+   print(" DIMENSIONES OPTIMIZADAS (FS >= 1.5)")
+   print("Tornillo de potencia -> d =", round(d_tornillo * 1e3, 2), "mm")
+   print("Pasador tipo 1       -> d =", round(d_pasador1 * 1e3, 2), "mm")
+   print("Pasador tipo 2       -> d =", round(d_pasador2 * 1e3, 2), "mm")
+   print("Brazos               -> t =", round(t_brazo * 1e3, 2), "mm")
 
 
 
